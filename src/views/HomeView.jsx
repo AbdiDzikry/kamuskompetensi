@@ -1,9 +1,9 @@
 import React from 'react';
-import { Search, Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import { Search, Loader2, Sparkles, AlertCircle, Upload, File, X } from 'lucide-react';
 
 const POPULAR_JOBS = ["Full Stack Developer", "Content Creator", "HR Manager", "Data Scientist"];
 
-const HomeView = ({ searchTerm, setSearchTerm, handleSearch, loading, error }) => {
+const HomeView = ({ searchTerm, setSearchTerm, handleSearch, loading, error, uploadedFiles, handleFileChange, handleDeleteFile }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-2xl mx-auto text-center animate-fadeIn">
       <div className="mb-8 p-4 bg-primary-50 rounded-full inline-block">
@@ -34,6 +34,40 @@ const HomeView = ({ searchTerm, setSearchTerm, handleSearch, loading, error }) =
           {loading ? <Loader2 className="animate-spin w-6 h-6" /> : <Search className="w-6 h-6" />}
         </button>
       </form>
+
+      <div className="mt-8 w-full">
+        <label htmlFor="file-upload" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors">
+          <Upload className="w-4 h-4" />
+          <span>Upload Dokumen (PDF, TXT)</span>
+        </label>
+        <input
+          id="file-upload"
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFileChange}
+          accept=".pdf,.txt"
+        />
+
+        {uploadedFiles.length > 0 && (
+          <div className="mt-4 text-left">
+            <h4 className="font-bold text-slate-600">Dokumen Terupload:</h4>
+            <ul className="mt-2 space-y-1">
+              {uploadedFiles.map((file, index) => (
+                <li key={index} className="text-sm text-slate-500 flex items-center justify-between bg-slate-100 p-2 rounded">
+                  <div className="flex items-center gap-2">
+                    <File className="w-4 h-4" />
+                    <span>{file.name}</span>
+                  </div>
+                  <button onClick={() => handleDeleteFile(file.name)} className="text-red-500 hover:text-red-700">
+                    <X className="w-4 h-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
 
       <div className="mt-8 flex flex-wrap justify-center gap-2">
         <span className="text-sm text-slate-400">Populer:</span>

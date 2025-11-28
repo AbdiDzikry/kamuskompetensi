@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { MessageSquare, Loader2 } from 'lucide-react';
 import ChatInput from './ChatInput';
+import ReactMarkdown from 'react-markdown';
 
 const ChatAssistant = ({ jobData, history, input, setInput, onSend, loading }) => {
   const chatEndRef = useRef(null);
@@ -33,7 +34,9 @@ const ChatAssistant = ({ jobData, history, input, setInput, onSend, loading }) =
                 ? 'bg-primary-600 text-white rounded-br-none' 
                 : 'bg-white border border-slate-200 text-slate-700 rounded-bl-none shadow-sm'
             }`}>
-              {msg.text}
+              <div className="prose prose-sm">
+                <ReactMarkdown>{msg.text}</ReactMarkdown>
+              </div>
             </div>
           </div>
         ))}

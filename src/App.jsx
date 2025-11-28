@@ -25,6 +25,51 @@ export default function App() {
   const [modalLoading, setModalLoading] = useState(false);
   const [quizAnswer, setQuizAnswer] = useState(null); // index of selected answer
 
+  // New Feature State: Document Upload
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+
+  useEffect(() => {
+    const storedFiles = localStorage.getItem('uploadedFiles');
+    if (storedFiles) {
+      setUploadedFiles(JSON.parse(storedFiles));
+    }
+  }, []);
+
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files);
+    const newFiles = [...uploadedFiles];
+
+    for (const file of files) {
+      let content = '';
+      if (file.type === 'application/pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument(arrayBuffer);
+        const pdf = await loadingTask.promise;
+        const numPages = pdf.numPages;
+        for (let i = 1; i <= numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          content += textContent.items.map(item => item.str).join(' ');
+        }
+      } else if (file.type === 'text/plain') {
+        content = await file.text();
+      } else {
+        // Handle other file types or show an error
+        continue;
+      }
+      newFiles.push({ name: file.name, content });
+    }
+
+    setUploadedFiles(newFiles);
+    localStorage.setItem('uploadedFiles', JSON.stringify(newFiles));
+  };
+
+  const handleDeleteFile = (fileName) => {
+    const newFiles = uploadedFiles.filter(file => file.name !== fileName);
+    setUploadedFiles(newFiles);
+    localStorage.setItem('uploadedFiles', JSON.stringify(newFiles));
+  };
+
   // Handler: Cari Kompetensi
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -35,7 +80,7 @@ export default function App() {
     setJobData(null);
     setChatHistory([]);
 
-    const prompt = `
+    let prompt = `
       Buatkan "Kamus Kompetensi" lengkap untuk posisi pekerjaan: "${searchTerm}".
       
       Output HARUS dalam format JSON dengan struktur persis seperti ini:
@@ -61,6 +106,18 @@ export default function App() {
       3. Pastikan search_keyword sangat spesifik.
       4. Gunakan Bahasa Indonesia.
     `;
+
+    if (uploadedFiles.length > 0) {
+      const fileContext = uploadedFiles.map(file => `Dokumen: ${file.name}\n${file.content}`).join('\n\n');
+      prompt = `
+        --- KONTEKS DOKUMEN INTERNAL ---
+        ${fileContext}
+        --- AKHIR DARI KONTEKS ---
+
+        Berdasarkan konteks di atas dan pengetahuan umum Anda, jawablah pertanyaan berikut:
+        ${prompt}
+      `;
+    }
 
     try {
       const result = await generateContent(prompt);
@@ -88,7 +145,7 @@ export default function App() {
       { 
         "skill": "${skillName}",
         "question": "Pertanyaan...", 
-        "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"], 
+        "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],
         "correctIndex": 0,
         "explanation": "Penjelasan singkat kenapa jawabannya benar." 
       }
@@ -149,7 +206,13 @@ export default function App() {
     setChatHistory(prev => [...prev, { sender: 'user', text: userMsg }]);
     setChatLoading(true);
 
-    const reply = await generateChatResponse(chatHistory, jobData, userMsg);
+    let context = jobData;
+    if (uploadedFiles.length > 0) {
+      const fileContext = uploadedFiles.map(file => `Dokumen: ${file.name}\n${file.content}`).join('\n\n');
+      context = { ...jobData, internalContext: fileContext };
+    }
+
+    const reply = await generateChatResponse(chatHistory, context, userMsg);
     
     setChatHistory(prev => [...prev, { sender: 'ai', text: reply }]);
     setChatLoading(false);
@@ -175,6 +238,9 @@ export default function App() {
             handleSearch={handleSearch}
             loading={loading}
             error={error}
+            uploadedFiles={uploadedFiles}
+            handleFileChange={handleFileChange}
+            handleDeleteFile={handleDeleteFile}
           />
         ) : (
           jobData && (
